@@ -1,0 +1,42 @@
+name: Build Feature Branch Docker Image
+
+# 仅用于个人 fork 的功能分支测试。构建 Web 版 Docker 镜像并作为 artifact 上传，
+# 用户从 Actions 页面下载 .tar 文件后，本地通过 `docker load -i` 加载测试。
+# 此 workflow 不应合并到上游仓库。
+
+on:
+  push:
+    branches:
+      - "feature/**"
+      - "test/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (output to tar)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          tags: splayer-spatial:test
+          outputs: type=docker,dest=/tmp/splayer-spatial.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: splayer-spatial-docker-image
+          path: /tmp/splayer-spatial.tar
+          retention-days: 7
+          compression-level: 6
